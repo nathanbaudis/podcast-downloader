@@ -23,17 +23,16 @@ cd "$DIR"
 # Error count
 COUNT='0'
 
-## Now we're going to check the feed for enclosures
-## then we're going to look for lines
-## that start with 'http' and end with 'mp3'
-
+# Remove linebreaks, then split items (feed entries) to their own lines
 curl -sfLS "$FEED" \
-| fgrep '<enclosure ' \
-| tr '"|\047' '\012' \
-| egrep '^http.*\.mp3$' \
-| while read line
+| tr -d '\r' | tr '\n' ' ' \
+| sed -e "s/&gt;/>/g" -e "s/&lt;/</g" \
+| perl -pe 's/<item>(.*?)<\/item>/\1\n/g' \
+| while read -r line
 do
-	URL="$line"
+    # Get URL from enclosure tag, fix ampersand encoding for curl
+    URL=$(printf '%s' "$line" | perl -pe 's/.*<enclosure url=\"(.*?)\".*/\1/g')
+    URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
     echo "URL: $URL"
 
     # Get the filename from the tail of the URL
