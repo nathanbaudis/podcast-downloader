@@ -8,14 +8,21 @@
 ###########################################
 
 
-# Name of script (given by filename)
-NAME="$0:t:r"
-
+##### Config
 # RSS feed
 FEED='http://feed.thisamericanlife.org/talpodcast'
+
 # Output folder name, create it if it doesn't exist
 DIR="$HOME/Media/Podcasts"
 [[ ! -d "$DIR" ]] && mkdir -p "$DIR"
+
+# Get filenames from title tags
+FILENAME_FROM_TITLE=1
+#####
+
+
+# Name of script (given by filename)
+NAME="$0:t:r"
 
 # Change into output directory
 cd "$DIR"
@@ -35,8 +42,18 @@ do
     URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
     echo "URL: $URL"
 
-    # Get the filename from the tail of the URL
-	FILENAME="$URL:t"
+
+    TITLE=$(printf '%s' "$line" | perl -pe 's/.*<title>(.*?)<\/title>.*/\1/g')
+
+    if [[ $FILENAME_FROM_TITLE -eq 1 ]]
+    then
+        FILENAME="$TITLE"".mp3"
+        # Remove colons from filename
+        FILENAME=$(printf '%s' "$FILENAME" | sed -e "s/://g")
+    else
+        # Get the filename from the tail of the URL
+        FILENAME="$URL:t:r"".mp3"
+    fi
 
     # Check to see if file with name alredy exists
 	if [[ -e "$FILENAME" ]]
