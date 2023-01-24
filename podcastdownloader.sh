@@ -10,11 +10,10 @@
 
 ##### Config
 # RSS feed
-FEED='http://feed.thisamericanlife.org/talpodcast'
+FEED_URL='http://feed.thisamericanlife.org/talpodcast'
 
-# Output folder name, create it if it doesn't exist
+# Output folder name
 DIR="$HOME/Media/Podcasts"
-[[ ! -d "$DIR" ]] && mkdir -p "$DIR"
 
 # Get filenames from title tags
 FILENAME_FROM_TITLE=1
@@ -24,16 +23,29 @@ FILENAME_FROM_TITLE=1
 # Name of script (given by filename)
 NAME="$0:t:r"
 
-# Change into output directory
-cd "$DIR"
+# Create output folder if it doesn't exist
+[[ ! -d "$DIR" ]] && mkdir -p "$DIR"
 
 # Error count
 COUNT='0'
 
-# Remove linebreaks, then split items (feed entries) to their own lines
-curl -sfLS "$FEED" \
+# Raw feed without linebreaks
+FEED=$(curl -sfLS "$FEED_URL" \
 | tr -d '\r' | tr '\n' ' ' \
-| sed -e "s/&gt;/>/g" -e "s/&lt;/</g" \
+| sed -e "s/&gt;/>/g" -e "s/&lt;/</g")
+
+# Get podcast title from first title tag (outside of an item)
+PODCAST_TITLE=$(printf '%s' "$FEED"  \
+| perl -pe 'print $1 and last if /.*?<title>(.*?)<\/title>.*?<item>/')
+
+# Create podcast subfolder if it doesn't exist and change intto it
+DIR_PODCAST="$DIR/$PODCAST_TITLE"
+[[ ! -d "$DIR_PODCAST" ]] && mkdir -p "$DIR_PODCAST"
+cd "$DIR_PODCAST"
+
+
+# Split items (feed entries) to their own lines and iterate over them
+printf '%s' "$FEED" \
 | perl -pe 's/<item>(.*?)<\/item>/\1\n/g' \
 | while read -r line
 do
@@ -41,7 +53,6 @@ do
     URL=$(printf '%s' "$line" | perl -pe 's/.*<enclosure url=\"(.*?)\".*/\1/g')
     URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
     echo "URL: $URL"
-
 
     TITLE=$(printf '%s' "$line" | perl -pe 's/.*<title>(.*?)<\/title>.*/\1/g')
 
