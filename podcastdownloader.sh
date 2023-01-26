@@ -24,7 +24,7 @@ NAME="$0:t:r"
 [[ ! -d "$DIR" ]] && mkdir -p "$DIR"
 
 # Error count
-COUNT='0'
+ERR_COUNT='0'
 
 
 # Iterate over podcasts
@@ -33,6 +33,7 @@ do
     # Get config options
     FEED_URL=${FEED_URL_ARR[i]}
     FILENAME_FROM_TITLE=${FILENAME_FROM_TITLE_ARR[i]}
+    EPISODE_COUNT=${EPISODE_COUNT_ARR[i]}
 
     # Raw feed without linebreaks
     FEED=$(curl -sfLS "$FEED_URL" \
@@ -48,12 +49,21 @@ do
     [[ ! -d "$DIR_PODCAST" ]] && mkdir -p "$DIR_PODCAST"
     cd "$DIR_PODCAST"
 
+    # Episode counter
+    COUNT=1
 
     # Split items (feed entries) to their own lines and iterate over them
     printf '%s' "$FEED" \
     | perl -pe 's/<item>(.*?)<\/item>/\1\n/g' \
     | while read -r line
     do
+        # Continue if specified episode number has been reached 
+        if [[ EPISODE_COUNT -ge 0 && COUNT -gt EPISODE_COUNT ]]
+        then
+            continue
+        fi
+        COUNT=$((COUNT+1))
+
         # Get URL from enclosure tag, fix ampersand encoding for curl
         URL=$(printf '%s' "$line" | perl -pe 's/.*<enclosure url=\"(.*?)\".*/\1/g')
         URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
@@ -86,7 +96,7 @@ do
                 echo "Successfully downloaded '$URL' to '$PWD/$FILENAME'."
             else
                 # Increment error count
-                ((COUNT++))
+                ((ERR_COUNT++))
                 # Print error and log to desktop
                 echo "$0 failed to download '$URL' to '$PWD/$FILENAME' (\$EXIT = $EXIT)" \
                 | tee -a "$HOME/Desktop/$0:t:r.errors.txt"
@@ -99,14 +109,14 @@ do
 done # End of podcast iteration
 
 
-if [[ "$COUNT" == "0" ]]
+if [[ "$ERR_COUNT" == "0" ]]
 then
 	echo "$NAME finished with no errors"
-elif [[ "$COUNT" == "1" ]]
+elif [[ "$ERR_COUNT" == "1" ]]
 then
 	echo "$NAME finished with 1 error"
 else
-	echo "$NAME finished with $COUNT errors"
+	echo "$NAME finished with $ERR_COUNT errors"
 fi
 
 exit 0
