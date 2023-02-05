@@ -33,6 +33,7 @@ do
     # Get config options
     FEED_URL=${FEED_URL_ARR[i]}
     FILENAME_FROM_TITLE=${FILENAME_FROM_TITLE_ARR[i]}
+    DOWNLOAD_SHOWNOTES=${DOWNLOAD_SHOWNOTES_ARR[i]}
     EPISODE_COUNT=${EPISODE_COUNT_ARR[i]}
 
     # Raw feed without linebreaks
@@ -94,23 +95,26 @@ do
         then
             echo "We already have '$PWD/$FILENAME_MP3'."
         else
-            # Shownotes
-            NOTES=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<content:encoded>(.*?)<\/content:encoded>.*/')
-
-            # If the content:encoded field is empty, use the description
-            if [[ $NOTES == "" ]]
+            if [[ $DOWNLOAD_SHOWNOTES -eq 1 ]]
             then
-                DESCRIPTION=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<description>(.*?)<\/description>.*/')
-                NOTES=$DESCRIPTION
-            fi
+                # Shownotes
+                NOTES=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<content:encoded>(.*?)<\/content:encoded>.*/')
 
-            # Convert shownotes to markdown using pandoc and save to file
-            if [[ "$NOTES" != "" ]]
-            then
-                # Remove CDATA enclosure if it exists
-                NOTES=$(printf '%s' "$NOTES" | perl -pe 's/.*<!\[CDATA\[(.*?)\]\]>.*/\1/g')
-                printf '%s' "$NOTES" | pandoc -f html -t markdown -o "$FILENAME_MD"
-            fi
+                # If the content:encoded field is empty, use the description
+                if [[ $NOTES == "" ]]
+                then
+                    DESCRIPTION=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<description>(.*?)<\/description>.*/')
+                    NOTES=$DESCRIPTION
+                fi
+
+                # Convert shownotes to markdown using pandoc and save to file
+                if [[ "$NOTES" != "" ]]
+                then
+                    # Remove CDATA enclosure if it exists
+                    NOTES=$(printf '%s' "$NOTES" | perl -pe 's/.*<!\[CDATA\[(.*?)\]\]>.*/\1/g')
+                    printf '%s' "$NOTES" | pandoc -f html -t markdown -o "$FILENAME_MD"
+                fi
+            fi 
 
             # Download the URL to the MP3 filename
             curl --output "$FILENAME_MP3" --silent --location --fail --show-error "$URL"
