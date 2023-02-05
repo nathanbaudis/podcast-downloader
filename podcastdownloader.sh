@@ -49,6 +49,8 @@ do
     [[ ! -d "$DIR_PODCAST" ]] && mkdir -p "$DIR_PODCAST"
     cd "$DIR_PODCAST"
 
+    echo "\nWorking on $PODCAST_TITLE"
+
     # Episode counter
     COUNT=1
 
@@ -69,40 +71,64 @@ do
         URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
         echo "URL: $URL"
 
+        # Get episode title and fix apostrophe encoding
         TITLE=$(printf '%s' "$line" | perl -pe 's/.*<title>(.*?)<\/title>.*/\1/g')
+        TITLE=$(printf '%s' "$TITLE" | sed -e "s/\&#039;/'/g")
+        echo "TITLE: $TITLE"
 
+        # Determine filename from feed URL or episode title
         if [[ $FILENAME_FROM_TITLE -eq 1 ]]
         then
-            FILENAME="$TITLE"".mp3"
+            FILENAME="$TITLE"
             # Remove colons from filename
             FILENAME=$(printf '%s' "$FILENAME" | sed -e "s/://g")
         else
             # Get the filename from the tail of the URL
-            FILENAME="$URL:t:r"".mp3"
+            FILENAME="$URL:t:r"
         fi
+        FILENAME_MP3="$FILENAME"".mp3"
+        FILENAME_MD="$FILENAME"".md"
 
         # Check to see if file with name alredy exists
-        if [[ -e "$FILENAME" ]]
+        if [[ -e "$FILENAME_MP3" ]]
         then
-            echo "We already have '$PWD/$FILENAME'."
+            echo "We already have '$PWD/$FILENAME_MP3'."
         else
-            # Download the URL to the $FILENAME
-            curl --output "$FILENAME" --silent --location --fail --show-error "$URL"
+            # Shownotes
+            NOTES=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<content:encoded>(.*?)<\/content:encoded>.*/')
+
+            # If the content:encoded field is empty, use the description
+            if [[ $NOTES == "" ]]
+            then
+                DESCRIPTION=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<description>(.*?)<\/description>.*/')
+                NOTES=$DESCRIPTION
+            fi
+
+            # Convert shownotes to markdown using pandoc and save to file
+            if [[ "$NOTES" != "" ]]
+            then
+                # Remove CDATA enclosure if it exists
+                NOTES=$(printf '%s' "$NOTES" | perl -pe 's/.*<!\[CDATA\[(.*?)\]\]>.*/\1/g')
+                printf '%s' "$NOTES" | pandoc -f html -t markdown -o "$FILENAME_MD"
+            fi
+
+            # Download the URL to the MP3 filename
+            curl --output "$FILENAME_MP3" --silent --location --fail --show-error "$URL"
 
             EXIT="$?"
 
             if [[ "$EXIT" == "0" ]]
             then
-                echo "Successfully downloaded '$URL' to '$PWD/$FILENAME'."
+                echo "Successfully downloaded '$URL' to '$PWD/$FILENAME_MP3'."
             else
                 # Increment error count
                 ((ERR_COUNT++))
                 # Print error and log to desktop
-                echo "$0 failed to download '$URL' to '$PWD/$FILENAME' (\$EXIT = $EXIT)" \
+                echo "$0 failed to download '$URL' to '$PWD/$FILENAME_MP3' (\$EXIT = $EXIT)" \
                 | tee -a "$HOME/Desktop/$0:t:r.errors.txt"
                 
                 # Move file to trash
-                mv -vn "$FILENAME" "$HOME/.Trash/$FILENAME.$$.$RANDOM.mp3"
+                mv -vn "$FILENAME_MP3" "$HOME/.Trash/$FILENAME_MP3.$$.$RANDOM.mp3"
             fi
         fi
     done # End of episode iteration
