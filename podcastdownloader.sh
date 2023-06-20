@@ -72,9 +72,9 @@ do
         URL=$(printf '%s' "$URL" | sed -e "s/\&amp;/\&/g")
         echo "URL: $URL"
 
-        # Get episode title and fix apostrophe encoding
+        # Get episode title and fix apostrophe, slash encoding
         TITLE=$(printf '%s' "$line" | perl -pe 's/.*<title>(.*?)<\/title>.*/\1/g')
-        TITLE=$(printf '%s' "$TITLE" | sed -e "s/\&#039;/'/g")
+        TITLE=$(printf '%s' "$TITLE" | sed -e "s/\&#039;/'/g" | sed -e "s/\///g")
         echo "TITLE: $TITLE"
 
         # Determine filename from feed URL or episode title
