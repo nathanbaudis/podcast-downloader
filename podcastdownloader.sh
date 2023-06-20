@@ -113,7 +113,7 @@ do
                     # Remove CDATA enclosure if it exists
                     NOTES=$(printf '%s' "$NOTES" | perl -pe 's/.*<!\[CDATA\[(.*?)\]\]>.*/\1/g')
                     # Remove link attributes which may not render correctly
-                    NOTES=$(printf '%s' "$NOTES" | sed -e "s/target=\"_blank\"//g" | sed -e "s/rel=\"nofollow noopener\"//g")
+                    NOTES=$(printf '%s' "$NOTES" | sed -e "s/target=\"_blank\"//g" | sed -e "s/rel=\"nofollow noopener\"//g" | sed -e "s/target=\"noopener noreferrer\"//g")
 
                     printf '%s' "$NOTES" | pandoc -f html -t markdown -o "$FILENAME_MD"
                 fi
