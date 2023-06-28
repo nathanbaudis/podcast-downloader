@@ -35,6 +35,7 @@ do
     FILENAME_FROM_TITLE=${FILENAME_FROM_TITLE_ARR[i]}
     DOWNLOAD_SHOWNOTES=${DOWNLOAD_SHOWNOTES_ARR[i]}
     EPISODE_COUNT=${EPISODE_COUNT_ARR[i]}
+    PREPEND_EP_NUM=${PREPEND_EP_NUM_ARR[i]}
 
     # Raw feed without linebreaks
     FEED=$(curl -sfLS "$FEED_URL" \
@@ -77,6 +78,9 @@ do
         TITLE=$(printf '%s' "$TITLE" | sed -e "s/\&#039;/'/g" | sed -e "s/\///g")
         echo "TITLE: $TITLE"
 
+        # Get episode number from tag, if specified
+        EP_NUMBER=$(printf '%s' "$line" | perl -ne 'print $1 if /.*<itunes:episode>(.*?)<\/itunes:episode>.*/')
+
         # Determine filename from feed URL or episode title
         if [[ $FILENAME_FROM_TITLE -eq 1 ]]
         then
@@ -87,6 +91,12 @@ do
             # Get the filename from the tail of the URL
             FILENAME="$URL:t:r"
         fi
+        # Prepend episode number if specified 
+        if [[ $EP_NUMBER != "" && $PREPEND_EP_NUM -eq 1 ]]
+        then
+            FILENAME="$EP_NUMBER $FILENAME"
+        fi
+        echo "FILENAME: $FILENAME"
         FILENAME_MP3="$FILENAME"".mp3"
         FILENAME_MD="$FILENAME"".md"
 
