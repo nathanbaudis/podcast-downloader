@@ -1,5 +1,8 @@
 #!/usr/bin/env zsh -f
 
+# Output folder name
+DIR="$HOME/Media/Podcasts"
+
 # Arrays specifying for each podcast:
 #   - RSS feed URL
 #   - Option whether to download shownotes

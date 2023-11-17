@@ -8,13 +8,8 @@
 ###########################################
 
 
-##### Config
-# Output folder name
-DIR="$HOME/Media/Podcasts"
-
-# Define arrays with config options for each podcast
+### Config: define output folder and arrays with config options
 . ./config.sh
-#####
 
 
 # Name of script (given by filename)
